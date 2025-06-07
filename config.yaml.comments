@@ -1,0 +1,15 @@
+# 日志相关
+log:
+  level: debug  # 日志级别,程序默认写入值: info
+  path: app.log  # 日志文件位置,程序默认写入值: app.log
+# 网络相关
+network:
+  ximalaya_ip: 8.8.8.8  # 喜马拉雅ip,可以是ip,也可以是域名
+# 数据库相关
+db:
+  name: pdd_order_test  # 数据库名字
+  user: root  # 数据库用户名
+  password: password  # 数据库mima
+# gin框架设置, 设置为release 生产模式 分:debug, release(默认), test
+gin:
+  mode: release  # 模式,debug打印日志会和默认log冲突,release不会
