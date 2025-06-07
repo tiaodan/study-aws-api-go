@@ -11,6 +11,9 @@ import (
 )
 
 // 变量
+type BucketBasics struct {
+	S3Client *s3.Client
+}
 
 // 生成s3客户端,用New方式
 // 参数

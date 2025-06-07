@@ -67,6 +67,11 @@
 # v1.0.0.1
 - aws s3能连了，写了查询存储桶的代码
 
+# v1.0.0.2
+- 本来 bucket的 增删改 是没有权限的, 开了 IAM Access Analyzer for S3 权限就可以了
+- object操作，刚写到上传
+- 修改错误打印，增加带参数打印。errorutil.errorPrintf()
+
 ---------------------------------------- 上传github替换 s3 keyId
 ---------------------------------------- 上传github替换 删除log中关于aws的key
 

@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"study-aws-api-go/log"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -13,9 +14,6 @@ import (
 )
 
 // 变量
-type BucketBasics struct {
-	S3Client *s3.Client
-}
 
 // 增
 // 参数:
@@ -23,29 +21,91 @@ type BucketBasics struct {
 // - bucketName string        桶名称
 // - region string           桶区域
 // 返回值:
-// - []types.Bucket
 // - error
 // func (basics BucketBasics) BucketQuery(ctx context.Context, s3Client *s3.Client) error { // 这种写法不够灵活
+// 思路：
+// 1. 创建存储桶
+// 2. 判断错误类型
+// 3. 等待一段时间，看存储桶是否创建成功，并可用
 func (basics BucketBasics) BucketAdd(ctx context.Context, bucketName string, region string) error {
-	basics.S3Client.CreateBucket(ctx, &s3.CreateBucketInput{
+	// 1. 创建存储桶
+	_, err := basics.S3Client.CreateBucket(ctx, &s3.CreateBucketInput{
 		Bucket: aws.String(bucketName),
 		CreateBucketConfiguration: &types.CreateBucketConfiguration{ // 创建桶的区域
-			LocationConstraint: types.BucketLocationConstraint(region),
+			LocationConstraint: types.BucketLocationConstraint(region), // 把string 转成指定类型
 		},
 	})
+
+	// 2. 判断错误类型
+	if err != nil {
+		var owned *types.BucketAlreadyOwnedByYou // 已经被你创建了
+		var existed *types.BucketAlreadyExists   // 可能被别人创建了
+		if errors.As(err, &owned) {
+			log.Errorf("存储桶 %s 已经存在,被你创建了。Bucket already exists by you.", bucketName)
+		} else if errors.As(err, &existed) {
+			log.Errorf("存储桶 %s 已经存在,被别人创建了。Bucket already exists by others.", bucketName)
+		}
+		return err
+	}
+
+	// 3. 等待一段时间-写死1分钟，看存储桶是否创建成功，并可用
+	log.Info("等待存储桶可用。Wait bucket can use.")
+	err = s3.NewBucketExistsWaiter(basics.S3Client).Wait(ctx, &s3.HeadBucketInput{Bucket: aws.String(bucketName)}, time.Minute)
+	if err != nil {
+		log.Errorf("等待存储桶 %s 可用, 失败。Wait bucket can use failed.", bucketName)
+		return err
+	}
+
+	// 说明创建成功
+	log.Infof("创建存储桶成功。Bucket %s created successfully.", bucketName)
 	return nil
 }
 
 // 删
-// 改
+// 参数:
+// - ctx context.Contex
+// - bucketName string        桶名称
+// - region string           桶区域 - 用不着，默认就是用配置里的
+// 返回值:
+// - error
+// 思路：
+// 1. 删除错误
+// 2. 判断错误
+// 3. 等待bucket 真被删除 (s3 上没有这个bucket)
+func (basics BucketBasics) BucketDelete(ctx context.Context, bucketName string) error {
+	// 1. 删除错误
+	_, err := basics.S3Client.DeleteBucket(ctx, &s3.DeleteBucketInput{Bucket: aws.String(bucketName)})
+	// 2. 判断错误
+	if err != nil {
+		var noBucket *types.NoSuchBucket
+		if errors.As(err, &noBucket) {
+			log.Errorf("要删除的存储桶 %s 不存在。Bucket does not exist.", bucketName)
+			err = noBucket
+		} else {
+			log.Errorf("删除存储桶 %s 失败。reason: %v", bucketName, err)
+		}
+		return err
+	}
 
-// 查
+	// 3. 等待bucket 真被删除 (s3 上没有这个bucket)
+	err = s3.NewBucketNotExistsWaiter(basics.S3Client).Wait(
+		ctx, &s3.HeadBucketInput{Bucket: aws.String(bucketName)}, time.Minute)
+	if err != nil {
+		log.Errorf("等待。。。 存储桶 %s 确实不存在, 失败。Wait bucket deleted failed.", bucketName)
+	}
+
+	log.Infof("删除存储桶 %s 成功", bucketName)
+	return err
+}
+
+// 改 - 没有sdk方法
+
+// 查 - 有权限
 // 参数:
 // - ctx context.Contex
 // 返回值:
 // - []types.Bucket
 // - error
-// func (basics BucketBasics) BucketQuery(ctx context.Context, s3Client *s3.Client) error { // 这种写法不够灵活
 func (basics BucketBasics) BucketQuery(ctx context.Context) ([]types.Bucket, error) {
 	result, err := basics.S3Client.ListBuckets(ctx, &s3.ListBucketsInput{})
 	if err != nil {

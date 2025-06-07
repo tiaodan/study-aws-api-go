@@ -7,6 +7,7 @@ import (
 	"study-aws-api-go/business/mys3"
 	"study-aws-api-go/business/order"
 	"study-aws-api-go/db"
+	"study-aws-api-go/errorutil"
 	"study-aws-api-go/log"
 	"study-aws-api-go/models"
 	"study-aws-api-go/myconfig"
@@ -20,7 +21,14 @@ import (
 )
 
 // 变量
+// 分类：
+// - config配置文件
+// - aws相关
 var (
+	// config 配置文件相关
+	cfg *myconfig.Config // 配置文件
+
+	// aws 相关
 	s3Basic  mys3.BucketBasics // 替代 s3Client
 	s3Client *s3.Client        // 一般不用
 	ctx      context.Context
@@ -36,7 +44,7 @@ var (
 // 6. 初始化aws s3配置,创建s3客户端
 func init() {
 	// 1. 读取配置文件， (如果配置文件不填, 自动会有默认值)
-	cfg := myconfig.GetConfig(".", "config", "yaml")
+	cfg = myconfig.GetConfig(".", "config", "yaml")
 
 	// 2. 根据配置文件,设置日志相关,现在用logrus框架
 	log.InitLog()
@@ -109,7 +117,13 @@ func init() {
 // ？. 初始化gin框架
 func main() {
 	// 3. s3 增删改查、上传、下载
-	s3Basic.BucketQuery(ctx) // 存储桶 - 查询
+	// err := s3Basic.BucketDelete(ctx, "mytesttest12234") // 存储桶 - add
+	// err := s3Basic.BucketAdd(ctx, "mytesttest12234", cfg.AWS_S3.Region) // 存储桶 - delete
+	// _, err := s3Basic.BucketQuery(ctx) // 存储桶 - query
+
+	// object 操作
+	err := s3Basic.FileUploadLowApi(ctx, "mytesttest12234", "test.txt", "/home/test.txt") // 上传文件
+	errorutil.ErrorPrint(err, "文件上传 报错 err= ")
 
 	// ？. 初始化gin框架
 	// 后面如果用不到，可以删除
