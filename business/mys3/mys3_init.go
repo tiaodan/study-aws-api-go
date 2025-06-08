@@ -7,12 +7,14 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
 // 变量
 type BucketBasics struct {
-	S3Client *s3.Client
+	S3Client  *s3.Client
+	S3Manager *manager.Uploader
 }
 
 // 生成s3客户端,用New方式

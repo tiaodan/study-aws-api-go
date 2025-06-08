@@ -100,13 +100,13 @@ func (basics BucketBasics) BucketDelete(ctx context.Context, bucketName string) 
 
 // 改 - 没有sdk方法
 
-// 查 - 有权限
+// 查 所有 - 有权限
 // 参数:
 // - ctx context.Contex
 // 返回值:
 // - []types.Bucket
 // - error
-func (basics BucketBasics) BucketQuery(ctx context.Context) ([]types.Bucket, error) {
+func (basics BucketBasics) BucketQueryAll(ctx context.Context) ([]types.Bucket, error) {
 	result, err := basics.S3Client.ListBuckets(ctx, &s3.ListBucketsInput{})
 	if err != nil {
 		var ae smithy.APIError
@@ -128,4 +128,45 @@ func (basics BucketBasics) BucketQuery(ctx context.Context) ([]types.Bucket, err
 		log.Debugf("存储桶名称: %s, 创建时间: %s", *bucket.Name, *bucket.CreationDate)
 	}
 	return result.Buckets, err
+}
+
+// 检测是否存在
+/*
+参数:
+	ctx context.Contex : 上下文
+	bucketName string : 存储桶名称
+返回值:
+	bool 是否存在
+	error: 错误
+思路:
+	1. 准备
+	2. 判断
+	3. 处理错误
+	4. 返回
+*/
+func (basics BucketBasics) BucketExists(ctx context.Context, bucketName string) (bool, error) {
+	// 1. 准备
+	exists := true // 默认存在
+
+	// 2. 判断
+	_, err := basics.S3Client.HeadBucket(ctx, &s3.HeadBucketInput{Bucket: aws.String(bucketName)})
+
+	// 3. 处理错误
+	if err != nil {
+		var apiErr smithy.APIError
+		if errors.As(err, &apiErr) {
+			switch apiErr.(type) {
+			case *types.NotFound:
+				log.Errorf("存储桶 %s 不存在", bucketName)
+			default:
+				log.Errorf("存储桶 %s 不存在。发生其f他错误,可鞥你没有权限访问, err= %v", bucketName, err)
+			}
+		}
+		exists = false
+		return exists, err
+	}
+
+	// 4. 返回
+	log.Infof("存储桶 %s 存在。", bucketName)
+	return exists, err
 }

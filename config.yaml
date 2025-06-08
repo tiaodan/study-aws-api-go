@@ -12,4 +12,4 @@ gin:
 aws_s3:
   region: ap-northeast-1
   access_key_id: AKIAQ
-  access_key_secret: D3A
+  access_key_secret: D3AG

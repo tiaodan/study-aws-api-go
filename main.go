@@ -14,6 +14,7 @@ import (
 
 	// 三方
 
+	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -29,9 +30,10 @@ var (
 	cfg *myconfig.Config // 配置文件
 
 	// aws 相关
-	s3Basic  mys3.BucketBasics // 替代 s3Client
-	s3Client *s3.Client        // 一般不用
-	ctx      context.Context
+	s3Basic   mys3.BucketBasics // 替代 s3Client
+	s3Client  *s3.Client
+	s3Manager *manager.Uploader
+	ctx       context.Context
 )
 
 // 初始化, 默认main会自动调用本方法
@@ -106,7 +108,11 @@ func init() {
 	// 6. 初始化aws s3配置,创建s3客户端 ->  实际使用s3Basic
 	// s3Client := mys3.InitS3Client("ap-northeast-1", "11keyId", "keySecret", "")
 	ctx, s3Client = mys3.InitS3Client(cfg.AWS_S3.Region, cfg.AWS_S3.AccessKeyId, cfg.AWS_S3.AccessKeySecret, "")
-	s3Basic = mys3.BucketBasics{S3Client: s3Client}
+	s3Manager = manager.NewUploader(s3Client) // init
+	s3Basic = mys3.BucketBasics{
+		S3Client:  s3Client,
+		S3Manager: s3Manager,
+	}
 }
 
 // main函数
@@ -119,11 +125,29 @@ func main() {
 	// 3. s3 增删改查、上传、下载
 	// err := s3Basic.BucketDelete(ctx, "mytesttest12234") // 存储桶 - add
 	// err := s3Basic.BucketAdd(ctx, "mytesttest12234", cfg.AWS_S3.Region) // 存储桶 - delete
-	// _, err := s3Basic.BucketQuery(ctx) // 存储桶 - query
+	// _, err := s3Basic.BucketQueryAll(ctx) // 存储桶 - query
+	// exists, err := s3Basic.BucketExists(ctx, "sexcomic") // 查询桶是否存在
 
 	// object 操作
-	err := s3Basic.FileUploadLowApi(ctx, "mytesttest12234", "test.txt", "/home/test.txt") // 上传文件
-	errorutil.ErrorPrint(err, "文件上传 报错 err= ")
+	// err := s3Basic.FileUploadLowApi(ctx, "sexcomic", "充满各种变态行为的家-1.jpg", "C://home/manhua/亲家四姊妹/充满各种变态行为的家/1.jpg")     // 上传文件
+	// outKey, err := s3Basic.ObjectUpload(ctx, "sexcomic", "充满各种变态行为的家-2.jpg", "C://home/manhua/亲家四姊妹/充满各种变态行为的家/2.jpg") // 上传文件
+	// _, err := s3Basic.ObjectDelete(ctx, "sexcomic", "充满各种变态行为的家-2.jpg", "", false) // 上传文件
+
+	// 批量删 文件
+	// objs := []types.ObjectIdentifier{
+	// 	{Key: aws.String("充满各种变态行为的家-1.jpg")},
+	// 	{Key: aws.String("充满各种变态行为的家-2.jpg")},
+	// }
+	// err := s3Basic.ObjectDeleteBatch(ctx, "sexcomic", objs, false) // 上传文件
+	// results, err := s3Basic.ObjectQueryAll(ctx, "sexcomic") // 查所有
+	// for _, result := range results {
+	// 	log.Info("查询到 ", *result.Key)
+	// }
+
+	// 下载
+	err := s3Basic.ObjectDownload(ctx, "sexcomic", "充满各种变态行为的家-1.jpg", "C://home/test/1.jpg") // 上传文件
+
+	errorutil.ErrorPrint(err, " 报错 err= ")
 
 	// ？. 初始化gin框架
 	// 后面如果用不到，可以删除
